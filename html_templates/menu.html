@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}
+App menu
+{% endblock %}
+
+{% block main %}
+    <div class="d-grid gap-2 col-6">
+        {% for dash_app in dash_apps %}
+            <a class="btn btn-outline-primary" role="button" href='{{ dash_app.url_base }}'>{{ dash_app.options["name"] }}</a>
+        {% endfor %}
+    </div>
+{% endblock %}

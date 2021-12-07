@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='style.css') }}">
+    <link rel= "stylesheet" type= "text/css" href= "https://eds-static.equinor.com/font/equinor-font.css">
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-start">
+            <p style="color: red;">THIS IS JUST A PROTOTYPE - THE SERVICE CAN GO DOWN AT ANY TIME FOR ANY REASON.</p>
+        </div>
+        <div class="row">
+            <div class="col-6">
+                <h3>
+                    {% block title %}{% endblock %}
+                </h3>
+            </div>
+        </div>
+        <hr>
+
+	{% block main %}{% endblock %}
+
+	<hr style="margin-top: 50px;">
+        <div class="row justify-content-end">
+            <a href="/" id="LogoLarge"></a>
+        </div>
+    </div>
+</body>
+</html>
