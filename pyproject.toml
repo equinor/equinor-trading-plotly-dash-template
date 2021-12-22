@@ -24,9 +24,6 @@ opencensus-ext-azure = "^1.1.0"
 azure-core = "^1.21.0"
 scikit-learn = "^1.0.1"
 waitress = "^2.0.0"
-pulumi = "^3.19.0"
-pulumi-azure-native = "^1.48.0"
-ipykernel = "^6.6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

@@ -1137,6 +1137,19 @@ pulumi = ">=3.0.0,<4.0.0"
 semver = ">=2.8.1"
 
 [[package]]
+name = "pulumi-docker"
+version = "3.1.0"
+description = "A Pulumi package for interacting with Docker in Pulumi programs"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+parver = ">=0.2.1"
+pulumi = ">=3.0.0,<4.0.0"
+semver = ">=2.8.1"
+
+[[package]]
 name = "py"
 version = "1.11.0"
 description = "library with cross-python path, ini-parsing, io, code, log facilities"
@@ -1664,7 +1677,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.9"
-content-hash = "c280bb245dc3a997a71604ebe9611de200f1947a4dcf4c19b721380e500b0b1f"
+content-hash = "2312881c9e3dba33bdc5d555d39dd642ec9d3331276dc56fafa25f09d5c2fa97"
 
 [metadata.files]
 alabaster = [
@@ -2335,6 +2348,9 @@ pulumi = [
 ]
 pulumi-azure-native = [
     {file = "pulumi_azure_native-1.48.0.tar.gz", hash = "sha256:e64d98a0376eb46560caa1d5ac560959c44803d8b8b3fe554195b8ea9e3ee927"},
+]
+pulumi-docker = [
+    {file = "pulumi_docker-3.1.0.tar.gz", hash = "sha256:0c5edb04448994de6cffb702146085856354efddbe78b0b38fa6a666428f0408"},
 ]
 py = [
     {file = "py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378"},
