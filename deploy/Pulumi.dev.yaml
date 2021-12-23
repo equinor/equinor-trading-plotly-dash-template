@@ -1,2 +1,5 @@
 config:
   azure-native:location: westeurope
+  equinor-trading-plotly-dash-template:repo-url: https://github.com/equinor/equinor-trading-plotly-dash-template
+  equinor-trading-plotly-dash-template:test-filename: iris.csv
+  equinor-trading-plotly-dash-template:test-filepath: ../test/iris.csv
