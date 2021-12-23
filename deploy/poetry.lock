@@ -491,9 +491,35 @@ pulumi = ">=3.0.0,<4.0.0"
 semver = ">=2.8.1"
 
 [[package]]
+name = "pulumi-azuread"
+version = "5.12.0"
+description = "A Pulumi package for creating and managing azuread cloud resources."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+parver = ">=0.2.1"
+pulumi = ">=3.0.0,<4.0.0"
+semver = ">=2.8.1"
+
+[[package]]
 name = "pulumi-docker"
 version = "3.1.0"
 description = "A Pulumi package for interacting with Docker in Pulumi programs"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+parver = ">=0.2.1"
+pulumi = ">=3.0.0,<4.0.0"
+semver = ">=2.8.1"
+
+[[package]]
+name = "pulumi-github"
+version = "4.9.0"
+description = "A Pulumi package for creating and managing github cloud resources."
 category = "main"
 optional = false
 python-versions = "*"
@@ -680,7 +706,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.9"
-content-hash = "d0070f64f1b2df23a0a61d89e09c54e3f6611f76e2a351018df7eb69a1511af2"
+content-hash = "b24840b955570cd7c08872ff87459360eb9f133fa29ff539da8329da316329e2"
 
 [metadata.files]
 appnope = [
@@ -986,8 +1012,14 @@ pulumi = [
 pulumi-azure-native = [
     {file = "pulumi_azure_native-1.50.0.tar.gz", hash = "sha256:6a05944852aec8477861cc9ee0ecf7a064c0a66ed45e873596f895708364d5ad"},
 ]
+pulumi-azuread = [
+    {file = "pulumi_azuread-5.12.0.tar.gz", hash = "sha256:2fb3134fa0945fbaab9a3bb6f57ee1dce7dd57adc092b026ae384e81db80a8ba"},
+]
 pulumi-docker = [
     {file = "pulumi_docker-3.1.0.tar.gz", hash = "sha256:0c5edb04448994de6cffb702146085856354efddbe78b0b38fa6a666428f0408"},
+]
+pulumi-github = [
+    {file = "pulumi_github-4.9.0.tar.gz", hash = "sha256:9d3214079895e080172b0146fdc046b5452f0429fe34afd04452279404ff0cc5"},
 ]
 py = [
     {file = "py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378"},
