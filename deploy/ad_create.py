@@ -1,13 +1,13 @@
+# This file is not in use and is really just and example of how one can
+# do and app registration in Azure AD with Python
+
 # %%
 import subprocess
 import json
-import pulumi
 from requests.models import HTTPError
 from azure.identity import AzureCliCredential
 from msgraph.core import GraphClient
 from datetime import datetime, timedelta
-
-config = pulumi.Config()
 
 # %%
 # Get tenant id
@@ -40,7 +40,7 @@ print(f"Application ID: {app_id}")
 # %%
 # Add owner to the app registration
 # TODO: Have this as manual input
-owners = ["jmyl", "jholw"]
+owners = ["abcd"]
 
 for owner in owners:
     user_id = graph.get(f"/users/{owner}@equinor.com").json()["id"]
@@ -52,7 +52,7 @@ for owner in owners:
         headers={'Content-Type': 'application/json'}
     )
     if response.status_code != 201:
-        if response.json()["error"]["message"] == "One or more added object references already exist for the following modified properties: 'owners'.":
+        if response.text and response.json()["error"]["message"] == "One or more added object references already exist for the following modified properties: 'owners'.":
             print(f"User {owner} is already an owner of the application, skipping...")
         else:
             raise HTTPError(response.json())
@@ -92,3 +92,4 @@ response = graph.delete(
 )
 if response.status_code != 204 and response.status_code != 201:
     raise HTTPError(response.json())
+# %%
