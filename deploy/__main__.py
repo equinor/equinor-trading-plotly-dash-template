@@ -155,7 +155,17 @@ app = web.WebApp(
     ),
 )
 
-# %%
+app_source_control = web.WebAppSourceControl(
+    "webapp-source-control",
+    name=app.name,
+    resource_group_name=resource_group.name,
+    branch="main",
+    is_git_hub_action=True,
+    repo_url=config.get("repo-url"),
+    git_hub_action_configuration=web.GitHubActionConfigurationArgs(
+        generate_workflow_file=False
+    )
+)
 
 access_policies = []
 access_policies.append(
