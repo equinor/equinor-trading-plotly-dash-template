@@ -1,29 +1,29 @@
 # This file is not in use and is really just and example of how one can
 # do and app registration in Azure AD with Python
 
-# %%
-import subprocess
 import json
-from requests.models import HTTPError
+import subprocess
+from datetime import datetime, timedelta
+
 from azure.identity import AzureCliCredential
 from msgraph.core import GraphClient
-from datetime import datetime, timedelta
+from requests.models import HTTPError
 
 # %%
 # Get tenant id
 result = subprocess.run(["az", "account", "tenant", "list"], stdout=subprocess.PIPE)
 tenant_id = json.loads(result.stdout.decode("utf-8"))[0]["tenantId"]
 
-# %% 
+# %%
 # Create app registration in Azure AD
-graph = GraphClient(credential=AzureCliCredential(), scopes=["https://graph.microsoft.com/.default"])
+graph = GraphClient(
+    credential=AzureCliCredential(), scopes=["https://graph.microsoft.com/.default"]
+)
 
 response = graph.post(
     "/applications",
-    data=json.dumps({
-        "displayName": "NGTT-test-app"
-    }),
-    headers={'Content-Type': 'application/json'}
+    data=json.dumps({"displayName": "NGTT-test-app"}),
+    headers={"Content-Type": "application/json"},
 )
 
 if response.status_code != 201:
@@ -46,13 +46,19 @@ for owner in owners:
     user_id = graph.get(f"/users/{owner}@equinor.com").json()["id"]
     response = graph.post(
         f"/applications/{object_id}/owners/$ref",
-        data=json.dumps({
-            "@odata.id": f"https://graph.microsoft.com/v1.0/directoryObjects/{user_id}"
-        }),
-        headers={'Content-Type': 'application/json'}
+        data=json.dumps(
+            {
+                "@odata.id": f"https://graph.microsoft.com/v1.0/directoryObjects/{user_id}"
+            }
+        ),
+        headers={"Content-Type": "application/json"},
     )
     if response.status_code != 201:
-        if response.text and response.json()["error"]["message"] == "One or more added object references already exist for the following modified properties: 'owners'.":
+        if (
+            response.text
+            and response.json()["error"]["message"]
+            == "One or more added object references already exist for the following modified properties: 'owners'."
+        ):
             print(f"User {owner} is already an owner of the application, skipping...")
         else:
             raise HTTPError(response.json())
@@ -64,13 +70,15 @@ expiry_date = datetime.utcnow() + timedelta(days=360)
 
 response = graph.post(
     f"/applications/{object_id}/addPassword",
-    data=json.dumps({
-        "passwordCredential": {
-            "displayName": "Client secret",
-            "endDateTime": expiry_date.isoformat()
+    data=json.dumps(
+        {
+            "passwordCredential": {
+                "displayName": "Client secret",
+                "endDateTime": expiry_date.isoformat(),
+            }
         }
-    }),
-    headers={'Content-Type': 'application/json'}
+    ),
+    headers={"Content-Type": "application/json"},
 )
 
 if response.status_code != 200:
@@ -85,11 +93,9 @@ subprocess.run(["pulumi", "config", "set", "app-id", app_id])
 subprocess.run(["pulumi", "config", "set", "--secret", "client-secret", client_secret])
 
 
-# %% 
+# %%
 # Destroy app registration
-response = graph.delete(
-    f"/applications/{object_id}"
-)
+response = graph.delete(f"/applications/{object_id}")
 if response.status_code != 204 and response.status_code != 201:
     raise HTTPError(response.json())
 # %%

@@ -6,12 +6,12 @@ from typing import Any, List, Text, Union
 import requests
 from azure.identity import DefaultAzureCredential
 from flask import Flask, redirect, render_template, request, session, url_for
-from flask_session import Session
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.wrappers import Response
 
 import config
+from flask_session import Session
 from src.utils.auth import Auth, login_required
 from src.utils.DataLoader import DataLoader
 from views.DashApp import DashApp
@@ -28,7 +28,10 @@ def create_app() -> Flask:
                 )
             )
         )
-    credential = DefaultAzureCredential(exclude_visual_studio_code_credential=True, exclude_shared_token_cache_credential=True)
+    credential = DefaultAzureCredential(
+        exclude_visual_studio_code_credential=True,
+        exclude_shared_token_cache_credential=True,
+    )
     data_loader = DataLoader(credential)
 
     app = Flask(__name__, template_folder="html_templates", static_folder="assets")

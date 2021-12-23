@@ -1,15 +1,12 @@
-import datetime
 from typing import Any, Dict, List
 
-from dash import dcc
-from dash import html
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
+from dash import dcc, html
 from dash.dependencies import Input, Output
 from flask.app import Flask
 from plotly.missing_ipywidgets import FigureWidget
-from plotly.subplots import make_subplots
 from sklearn.cluster import KMeans
 
 from src.utils.DataLoader import DataLoader
@@ -23,6 +20,7 @@ LAYOUT = go.Layout(
         b=0,  # bottom margin
     )
 )
+
 
 class IrisExample(DashApp):
     df = None
@@ -46,7 +44,7 @@ class IrisExample(DashApp):
                 Input("cluster-count", "value"),
             ],
         )
-        def make_graph(x, y, n_clusters):
+        def make_graph(x: Any, y: Any, n_clusters: int) -> FigureWidget:
             # minimal input validation, make sure there's at least one cluster
             km = KMeans(n_clusters=max(n_clusters, 1))
             df = self.iris.loc[:, [x, y]]
@@ -79,27 +77,26 @@ class IrisExample(DashApp):
             layout = {"xaxis": {"title": x}, "yaxis": {"title": y}}
 
             return go.Figure(data=data, layout=layout)
+
         # make sure that x and y values can't be the same variable
-        def filter_options(v):
+        def filter_options(v: Any) -> List[Dict]:
             """Disable option v"""
             return [
                 {"label": col, "value": col, "disabled": col == v}
                 for col in self.iris.columns
             ]
 
-
         # functionality is the same for both dropdowns, so we reuse filter_options
-        self.app.callback(Output("x-variable", "options"), [Input("y-variable", "value")])(
-            filter_options
-        )
-        self.app.callback(Output("y-variable", "options"), [Input("x-variable", "value")])(
-            filter_options
-        )
+        self.app.callback(
+            Output("x-variable", "options"), [Input("y-variable", "value")]
+        )(filter_options)
+        self.app.callback(
+            Output("y-variable", "options"), [Input("x-variable", "value")]
+        )(filter_options)
 
     def load_data(self) -> None:
         self.iris = pd.read_csv(
-            self.data_loader.get(**self.data_files["iris"]),
-            index_col=0
+            self.data_loader.get(**self.data_files["iris"]), index_col=0
         )
         print(self.iris)
 
@@ -119,7 +116,8 @@ class IrisExample(DashApp):
                                             dcc.Dropdown(
                                                 id="x-variable",
                                                 options=[
-                                                    {"label": col, "value": col} for col in self.iris.columns
+                                                    {"label": col, "value": col}
+                                                    for col in self.iris.columns
                                                 ],
                                                 value="sepal length (cm)",
                                             ),
@@ -131,7 +129,8 @@ class IrisExample(DashApp):
                                             dcc.Dropdown(
                                                 id="y-variable",
                                                 options=[
-                                                    {"label": col, "value": col} for col in self.iris.columns
+                                                    {"label": col, "value": col}
+                                                    for col in self.iris.columns
                                                 ],
                                                 value="sepal width (cm)",
                                             ),
@@ -140,14 +139,18 @@ class IrisExample(DashApp):
                                     html.Div(
                                         [
                                             dbc.Label("Cluster count"),
-                                            dbc.Input(id="cluster-count", type="number", value=3),
+                                            dbc.Input(
+                                                id="cluster-count",
+                                                type="number",
+                                                value=3,
+                                            ),
                                         ]
                                     ),
                                 ],
                                 body=True,
-                            )
-
-                            , md=4),
+                            ),
+                            md=4,
+                        ),
                         dbc.Col(dcc.Graph(id="cluster-graph"), md=8),
                     ],
                     align="center",

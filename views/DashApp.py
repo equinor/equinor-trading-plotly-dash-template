@@ -13,7 +13,6 @@ class DashApp(metaclass=abc.ABCMeta):
     def __init__(self, url_base: str, title: str = "NGTT Dashboard") -> None:
         self.url_base = url_base
         self.title = title
-        self.app = None
 
     def initialize(self, server: Flask) -> None:
         external_stylesheets = [
@@ -32,7 +31,7 @@ class DashApp(metaclass=abc.ABCMeta):
         self.app.layout = self.onload
 
         @self.app.callback(Output("content", "children"), Input("_ignore", "value"))
-        def data_loader_callback(layout) -> Any:
+        def data_loader_callback(layout: Any) -> Any:
             try:
                 self.load_data()
                 return self.get_html()

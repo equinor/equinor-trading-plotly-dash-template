@@ -14,7 +14,7 @@ class DataLoader:
         self.cache: Dict = {}
         if Path("cache.gz").is_file():
             with gzip.open("cache.gz", "rb") as file:
-                self.cache = pickle.load(file)
+                self.cache = pickle.load(file)  # type: ignore
 
     def get(
         self, account_url: str, container: str, filename: str, use_cache: bool = True
@@ -41,7 +41,7 @@ class DataLoader:
                 "properties": properties,
             }
             with gzip.open("cache.gz", "wb") as file:
-                pickle.dump(self.cache, file)
+                pickle.dump(self.cache, file)  # type: ignore
             return BytesIO(self.cache[data_key]["data"])
         print(f"Loading file {filename} from datastore")
         return BytesIO(blobClient.download_blob().readall())
