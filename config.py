@@ -12,7 +12,7 @@ SCOPES = ["User.ReadBasic.All"]
 SESSION_TYPE = (
     "filesystem"  # Specifies the token cache should be stored in server-side session
 )
-KEYVAULT_URI = "https://vault2ab16e89.vault.azure.net/"
+KEYVAULT_URI = "https://vault4e89eeed.vault.azure.net/"
 SECRET_NAME = "client-secret"
 ROLES: List[str] = []
 CHECK_PROD = "IS_PROD"
@@ -21,7 +21,7 @@ CHECK_PROD = "IS_PROD"
 # Data files
 data_files = {
     "iris": {
-        "account_url": "https://sad849bd05.blob.core.windows.net",
+        "account_url": "https://sa90c557e8.blob.core.windows.net",
         "container": "test",
         "filename": "iris.csv",
     }
