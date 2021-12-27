@@ -6,34 +6,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      VIRTUALENV_NAME: ".venv"
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.x
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.x
+        python-version: 3.8
 
-    # - name: Building web app
-    #   uses: azure/appservice-build@v2
-
-    - name: Cache virtual environment
-      uses: actions/cache@v2
-      env:
-        cache-name: cache-poetry-packages
-      with:
-        path: ~/.cache/pypoetry
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/poetry.lock') }}
-        
     - name: Install Poetry
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
         echo "$HOME/.poetry/bin" >> $GITHUB_PATH
-        poetry config virtualenvs.in-project true
+        poetry export -f requirements.txt --output requirements.txt
         
-    - name:   Install dependencies
-      run:    poetry install
+    - name: Building web app
+      uses: azure/appservice-build@v2
 
     - name: Deploy web App using GH Action azure/webapps-deploy
       uses: azure/webapps-deploy@v2
