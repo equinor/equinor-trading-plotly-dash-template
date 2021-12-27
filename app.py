@@ -18,7 +18,7 @@ from views.DashApp import DashApp
 from views.IrisExample import IrisExample
 
 
-def create_app() -> Flask:
+def app() -> Flask:
     if config.CHECK_PROD in os.environ:
         logger = logging.getLogger(__name__)
         logger.addHandler(
@@ -34,9 +34,9 @@ def create_app() -> Flask:
     )
     data_loader = DataLoader(credential)
 
-    app = Flask(__name__, template_folder="html_templates", static_folder="assets")
-    app.config.from_object(config)
-    Session(app)
+    server = Flask(__name__, template_folder="html_templates", static_folder="assets")
+    server.config.from_object(config)
+    Session(server)
 
     # Dash stuff
     DASH_URL_BASE = "/views/"
@@ -57,16 +57,16 @@ def create_app() -> Flask:
 
     auth = Auth(config, credential)
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # type: ignore
+    server.wsgi_app = ProxyFix(server.wsgi_app, x_proto=1, x_host=1)  # type: ignore
 
     for i, dash_app in enumerate(dash_apps):
-        dash_app.initialize(app)
+        dash_app.initialize(server)
         for view_func in dash_app.app.server.view_functions:
             dash_app.app.server.view_functions[view_func] = login_required(
                 auth, config.ROLES, config.SCOPES
             )(dash_app.app.server.view_functions[view_func])
 
-    @app.route("/")
+    @server.route("/")
     @login_required(auth, config.ROLES, config.SCOPES)
     def index() -> Text:
         if "flow" not in session:
@@ -81,7 +81,7 @@ def create_app() -> Flask:
             name=name,
         )
 
-    @app.route("/test")
+    @server.route("/test")
     @login_required(auth, config.ROLES, config.SCOPES)
     def test() -> Any:
         token = auth._get_token_from_cache(config.SCOPES)
@@ -91,7 +91,7 @@ def create_app() -> Flask:
         ).json()
         return graph_data
 
-    @app.route("/menu")
+    @server.route("/menu")
     @login_required(auth, config.ROLES, config.SCOPES)
     def menu() -> Text:
         return render_template(
@@ -100,18 +100,18 @@ def create_app() -> Flask:
             dash_apps=dash_apps,
         )
 
-    @app.route("/not_signed_in")
+    @server.route("/not_signed_in")
     def not_signed_in() -> Text:
         session["flow"] = auth._build_auth_code_flow(scopes=config.SCOPES)
         return render_template(
             "not_signed_in.html", auth_url=session["flow"]["auth_uri"]
         )
 
-    @app.route("/access_denied")
+    @server.route("/access_denied")
     def access_denied() -> Text:
         return render_template("access_denied.html")
 
-    @app.route(config.REDIRECT_PATH)
+    @server.route(config.REDIRECT_PATH)
     def authorized() -> Union[Text, Any]:
         try:
             cache = auth._load_cache()
@@ -132,7 +132,7 @@ def create_app() -> Flask:
             )
         return redirect(url_for("index"))
 
-    @app.route("/logout")
+    @server.route("/logout")
     def logout() -> Response:
         session.clear()
         return redirect(
@@ -142,7 +142,7 @@ def create_app() -> Flask:
             + url_for("index", _external=True)
         )
 
-    @app.route("/graphcall")
+    @server.route("/graphcall")
     @login_required(auth, config.ROLES, config.SCOPES)
     def graphcall() -> Text:
         token = auth._get_token_from_cache(config.SCOPES)
@@ -152,10 +152,10 @@ def create_app() -> Flask:
         ).json()
         return render_template("display.html", result=graph_data)
 
-    app.jinja_env.globals.update(_build_auth_code_flow=auth._build_auth_code_flow)
-    return app
+    server.jinja_env.globals.update(_build_auth_code_flow=auth._build_auth_code_flow)
+    return server
 
 
 if __name__ == "__main__":
-    app = create_app()
-    app.run(host="0.0.0.0")
+    server = app()
+    server.run(host="0.0.0.0")
