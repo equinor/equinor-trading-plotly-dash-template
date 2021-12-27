@@ -13,6 +13,15 @@ jobs:
       with:
         python-version: 3.8
 
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+        poetry export -f requirements.txt --output requirements.txt --without-hashes
+        
+    - name: Building web app
+      uses: azure/appservice-build@v2
+
     - name: Deploy web App using GH Action azure/webapps-deploy
       uses: azure/webapps-deploy@v2
       with:
