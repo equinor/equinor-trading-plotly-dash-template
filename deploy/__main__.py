@@ -163,8 +163,10 @@ app_source_control = web.WebAppSourceControl(
     is_git_hub_action=True,
     repo_url=config.get("repo-url"),
     git_hub_action_configuration=web.GitHubActionConfigurationArgs(
-        generate_workflow_file=False
-    )
+        generate_workflow_file=False,
+        is_linux=True,
+        code_configuration=web.GitHubActionCodeConfiguration(),
+    ),
 )
 
 access_policies = []
