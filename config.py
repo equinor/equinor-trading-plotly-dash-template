@@ -12,7 +12,7 @@ SCOPES = ["User.ReadBasic.All"]
 SESSION_TYPE = (
     "filesystem"  # Specifies the token cache should be stored in server-side session
 )
-KEYVAULT_URI = "https://vault4874c26e.vault.azure.net/"
+KEYVAULT_URI = "https://vault44a59d9d.vault.azure.net/"
 SECRET_NAME = "client-secret"
 ROLES: List[str] = []
 CHECK_PROD = "IS_PROD"
