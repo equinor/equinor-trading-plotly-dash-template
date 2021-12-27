@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VIRTUALENV_NAME: ".venv"
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3.x
@@ -13,25 +15,25 @@ jobs:
       with:
         python-version: 3.x
 
-#    - name: Building web app
-#      uses: azure/appservice-build@v2
+    # - name: Building web app
+    #   uses: azure/appservice-build@v2
 
-    # - name: Cache virtual environment
-    #   uses: actions/cache@v2
-    #   env:
-    #     cache-name: cache-poetry-packages
-    #   with:
-    #     path: ~/.cache/pypoetry
-    #     key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/poetry.lock') }}
+    - name: Cache virtual environment
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-poetry-packages
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/poetry.lock') }}
         
-    # - name: Install Poetry
-    #   run: |
-    #     curl -sSL https://install.python-poetry.org | python3 -
-    #     echo "$HOME/.poetry/bin" >> $GITHUB_PATH
-    #     poetry config virtualenvs.in-project true
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+        poetry config virtualenvs.in-project true
         
-    # - name:   Install dependencies
-    #   run:    poetry install
+    - name:   Install dependencies
+      run:    poetry install
 
     - name: Deploy web App using GH Action azure/webapps-deploy
       uses: azure/webapps-deploy@v2
