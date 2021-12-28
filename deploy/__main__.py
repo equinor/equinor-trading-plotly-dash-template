@@ -1,8 +1,6 @@
-# %%
 """An Azure RM Python Pulumi program"""
 
 import uuid
-from typing import List
 
 import pulumi
 import pulumi_azuread as ad
@@ -15,29 +13,41 @@ from pulumi_azure_native import (
     web,
 )
 
+from config import create_config_file
+
 config = pulumi.Config()
 client_config = authorization.get_client_config()
 
+# Azure Active Directory related resources
 app_registration = ad.Application(
-    "appregistration", display_name="NGTT-test-app", owners=[client_config.object_id]
+    config.get("project-name-prefix"),
+    display_name=config.get("project-name-prefix"),
+    owners=[client_config.object_id]
 )
 
 app_client_secret = ad.ApplicationPassword(
-    "appclientsecret",
+    config.get("project-name-prefix"),
     application_object_id=app_registration.object_id,
     display_name="Client secret",
     end_date_relative="8700h",
 )
 
+service_principal = ad.ServicePrincipal(
+    config.get("project-name-prefix"),
+    application_id=app_registration.application_id,
+    app_role_assignment_required=False,
+    owners=[client_config.object_id],
+)
+
 # CUSTOM_IMAGE = "cicddeployment"
 
 # Create an Azure Resource Group
-resource_group = resources.ResourceGroup("plotly-dash-example")
+resource_group = resources.ResourceGroup(config.get("project-name-prefix"))
 
 
 # Create an Azure resource (Storage Account)
 account = storage.StorageAccount(
-    "sa",
+    config.get("project-name-prefix")[:16],
     resource_group_name=resource_group.name,
     sku=storage.SkuArgs(
         name=storage.SkuName.STANDARD_LRS,
@@ -46,13 +56,13 @@ account = storage.StorageAccount(
 )
 
 container = storage.BlobContainer(
-    "test",
+    config.get("test-filecontainer"),
     resource_group_name=resource_group.name,
     account_name=account.name,
 )
 
 blob = storage.Blob(
-    "iris.csv",
+    config.get("test-filename"),
     resource_group_name=resource_group.name,
     account_name=account.name,
     container_name=container.name,
@@ -62,7 +72,7 @@ blob = storage.Blob(
 
 
 plan = web.AppServicePlan(
-    "plan",
+    config.get("project-name-prefix"),
     resource_group_name=resource_group.name,
     kind="Linux",
     reserved=True,
@@ -123,17 +133,18 @@ plan = web.AppServicePlan(
 # )
 
 app_insights = insights.Component(
-    "appservice-ai",
+    config.get("project-name-prefix"),
     application_type=insights.ApplicationType.WEB,
     kind="web",
     resource_group_name=resource_group.name,
 )
 
 app = web.WebApp(
-    "webapp",
+    config.get("project-name-prefix"),
     resource_group_name=resource_group.name,
     server_farm_id=plan.id,
     site_config=web.SiteConfigArgs(
+        app_command_line='gunicorn --bind=0.0.0.0 --timeout 600 "app:app()"',
         app_settings=[
             web.NameValuePairArgs(
                 name="APPINSIGHTS_INSTRUMENTATIONKEY",
@@ -156,7 +167,7 @@ app = web.WebApp(
 )
 
 app_source_control = web.WebAppSourceControl(
-    "webapp-source-control",
+    config.get("project-name-prefix"),
     name=app.name,
     resource_group_name=resource_group.name,
     branch="main",
@@ -165,7 +176,6 @@ app_source_control = web.WebAppSourceControl(
     git_hub_action_configuration=web.GitHubActionConfigurationArgs(
         generate_workflow_file=False,
         is_linux=True,
-        code_configuration=web.GitHubActionCodeConfiguration(),
     ),
 )
 
@@ -186,7 +196,7 @@ access_policies.append(
 )
 
 vault = keyvault.Vault(
-    "vault",
+    config.get("project-name-prefix"),
     properties=keyvault.VaultPropertiesArgs(
         access_policies=access_policies,
         enabled_for_deployment=True,
@@ -199,7 +209,7 @@ vault = keyvault.Vault(
         tenant_id=client_config.tenant_id,
     ),
     resource_group_name=resource_group.name,
-    vault_name="vault" + str(uuid.uuid4())[:8],
+    vault_name=config.get("project-name-prefix")[:16] + str(uuid.uuid4())[:8],
 )
 
 
@@ -243,42 +253,6 @@ role_assignment = authorization.RoleAssignment(
         account.name,
     ),
 )
-
-
-def create_config_file(args: List[pulumi.Output]) -> None:
-    client_id, tenant_id, vault_name, secret_name, account_name = args
-    config_file = f"""from typing import List
-
-CLIENT_ID = "{client_id}"  # Application (client) ID of app registration
-AUTHORITY = "https://login.microsoftonline.com/{tenant_id}"
-REDIRECT_PATH = "/getAToken"  # Used for forming an absolute URL to your redirect URI.
-# The absolute URL must match the redirect URI you set
-# in the app's registration in the Azure portal.
-ENDPOINT = (
-    "https://graph.microsoft.com/v1.0/me"  # This resource requires no admin consent
-)
-SCOPES = ["User.ReadBasic.All"]
-SESSION_TYPE = (
-    "filesystem"  # Specifies the token cache should be stored in server-side session
-)
-KEYVAULT_URI = "https://{vault_name}.vault.azure.net/"
-SECRET_NAME = "{secret_name}"
-ROLES: List[str] = []
-CHECK_PROD = "IS_PROD"
-
-
-# Data files
-data_files = {{
-    "iris": {{
-        "account_url": "https://{account_name}.blob.core.windows.net",
-        "container": "test",
-        "filename": "iris.csv",
-    }}
-}}
-"""
-    with open("../config.py", "w") as file:
-        file.write(config_file)
-
 
 pulumi.Output.all(
     client_config.client_id,
