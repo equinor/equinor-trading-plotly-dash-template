@@ -82,55 +82,6 @@ plan = web.AppServicePlan(
     ),
 )
 
-# registry = containerregistry.Registry(
-#     "registry",
-#     resource_group_name=resource_group.name,
-#     sku=containerregistry.SkuArgs(
-#         name="Basic",
-#     ),
-#     admin_user_enabled=True)
-
-# credentials = containerregistry.list_registry_credentials_output(resource_group_name=resource_group.name,
-#                                                                  registry_name=registry.name)
-# admin_username = credentials.username
-# admin_password = credentials.passwords[0]["value"]
-
-# my_image = docker.Image(
-#     CUSTOM_IMAGE,
-#     image_name=registry.login_server.apply(
-#         lambda login_server: f"{login_server}/{CUSTOM_IMAGE}:v1.0.0"),
-#     build=docker.DockerBuild(context=f"./{CUSTOM_IMAGE}"),
-#     registry=docker.ImageRegistry(
-#         server=registry.login_server,
-#         username=admin_username,
-#         password=admin_password
-#     )
-# )
-
-# web_app = web.WebApp(
-#     "webapp",
-#     resource_group_name=resource_group.name,
-#     server_farm_id=plan.id,
-#     site_config=web.SiteConfigArgs(
-#         app_settings=[
-#             web.NameValuePairArgs(name="WEBSITES_ENABLE_APP_SERVICE_STORAGE", value="false"),
-#             web.NameValuePairArgs(name="DOCKER_REGISTRY_SERVER_URL",
-#                                   value=registry.login_server.apply(
-#                                       lambda login_server: f"https://{login_server}")),
-#             web.NameValuePairArgs(name="DOCKER_REGISTRY_SERVER_USERNAME",
-#                                   value=admin_username),
-#             web.NameValuePairArgs(name="DOCKER_REGISTRY_SERVER_PASSWORD",
-#                                   value=admin_password),
-#             web.NameValuePairArgs(name="WEBSITES_PORT", value="80"),
-#         ],
-#         always_on=True,
-#         linux_fx_version=my_image.image_name.apply(lambda image_name: f"DOCKER|{image_name}"),
-#     ),
-#     https_only=True,
-#     identity=web.ManagedServiceIdentityArgs(
-#         type=web.ManagedServiceIdentityType.SYSTEM_ASSIGNED
-#     )
-# )
 
 app_insights = insights.Component(
     config.get("project-name-prefix"),
