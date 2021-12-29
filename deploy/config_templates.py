@@ -3,7 +3,7 @@ from typing import List
 import pulumi
 
 
-def create_config_file(args: List[pulumi.Output]) -> None:
+def create_config_file(args: List[str]) -> None:
     client_id, tenant_id, vault_name, secret_name, account_name = args
     config_file = f"""from typing import List
 
@@ -37,8 +37,7 @@ data_files = {{
     with open("../config.py", "w") as file:
         file.write(config_file)
 
-def create_publish_profile(args: List[pulumi.Output]) -> str:
-    publish_url, user_name, user_pwd, destination_app_url = args
+def create_publish_profile(publish_url: str, user_name: str, user_pwd: str, destination_app_url: str) -> str:
     publish_profile = f"""<publishData>
     <publishProfile
         publishUrl="{publish_url}"
