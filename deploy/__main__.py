@@ -1,8 +1,8 @@
-"""An Azure RM Python Pulumi program"""
-
+from typing import Dict
 import uuid
 
 import pulumi
+from pulumi_azure_native.web.list_web_app_publishing_credentials import ListWebAppPublishingCredentialsResult
 import pulumi_azuread as ad
 from pulumi_azure_native import (
     authorization,
@@ -13,33 +13,25 @@ from pulumi_azure_native import (
     web,
 )
 
-from config import create_config_file
+from config_templates import create_config_file
+from utils import add_publish_profile_and_web_app_name
 
 config = pulumi.Config()
 client_config = authorization.get_client_config()
 
-# Azure Active Directory related resources
-app_registration = ad.Application(
-    config.get("project-name-prefix"),
-    display_name=config.get("project-name-prefix"),
-    owners=[client_config.object_id]
-)
-
-app_client_secret = ad.ApplicationPassword(
-    config.get("project-name-prefix"),
-    application_object_id=app_registration.object_id,
-    display_name="Client secret",
-    end_date_relative="8700h",
-)
-
-service_principal = ad.ServicePrincipal(
-    config.get("project-name-prefix"),
-    application_id=app_registration.application_id,
-    app_role_assignment_required=False,
-    owners=[client_config.object_id],
-)
-
-# CUSTOM_IMAGE = "cicddeployment"
+roles = [
+        {
+            "allowedMemberTypes": [
+                "User"
+            ],
+            "description": "Read data",
+            "displayName": "Read",
+            "id": "6db443d0-1217-46ec-b794-8c7a71ed716c",
+            "isEnabled": True,
+            "origin": "Application",
+            "value": "Read"
+        }
+]
 
 # Create an Azure Resource Group
 resource_group = resources.ResourceGroup(config.get("project-name-prefix"))
@@ -66,11 +58,12 @@ blob = storage.Blob(
     resource_group_name=resource_group.name,
     account_name=account.name,
     container_name=container.name,
-    source=pulumi.FileAsset("../test/iris.csv"),
+    source=pulumi.FileAsset(config.get("test-filepath")),
     content_type="text",
 )
 
 
+# App service
 plan = web.AppServicePlan(
     config.get("project-name-prefix"),
     resource_group_name=resource_group.name,
@@ -81,7 +74,6 @@ plan = web.AppServicePlan(
         tier="Basic",
     ),
 )
-
 
 app_insights = insights.Component(
     config.get("project-name-prefix"),
@@ -130,6 +122,56 @@ app_source_control = web.WebAppSourceControl(
     ),
 )
 
+
+# Azure Active Directory related resources
+app_registration = ad.Application(
+    config.get("project-name-prefix"),
+    display_name=config.get("project-name-prefix"),
+    owners=[client_config.object_id],
+    app_roles=[ad.ApplicationAppRoleArgs(
+            allowed_member_types=role["allowedMemberTypes"],
+            description=role["description"],
+            display_name=role["displayName"],
+            id=role["id"],
+            enabled=role["isEnabled"],
+            value=role["value"]
+        ) for role in roles
+    ],
+    web=ad.ApplicationWebArgs(
+        implicit_grant=ad.ApplicationWebImplicitGrantArgs(
+            id_token_issuance_enabled=True
+        ),
+        redirect_uris=[
+            app.default_host_name.apply(lambda arg: "https://" + arg + "/getAToken"),
+            "http://localhost:5000/getAToken",
+        ],
+    )
+)
+
+app_client_secret = ad.ApplicationPassword(
+    config.get("project-name-prefix"),
+    application_object_id=app_registration.object_id,
+    display_name="Client secret",
+    end_date_relative="8700h",
+)
+
+service_principal = ad.ServicePrincipal(
+    config.get("project-name-prefix"),
+    application_id=app_registration.application_id,
+    app_role_assignment_required=False,
+    owners=[client_config.object_id],
+)
+
+for role in roles:
+    role_assignment = ad.AppRoleAssignment(
+        role["displayName"],
+        app_role_id=role["id"],
+        principal_object_id=client_config.object_id,
+        resource_object_id=service_principal.object_id
+    )
+
+
+# Key vault
 access_policies = []
 access_policies.append(
     keyvault.AccessPolicyEntryArgs(
@@ -162,7 +204,6 @@ vault = keyvault.Vault(
     resource_group_name=resource_group.name,
     vault_name=config.get("project-name-prefix")[:16] + str(uuid.uuid4())[:8],
 )
-
 
 secret = keyvault.Secret(
     "client-secret",
@@ -204,6 +245,21 @@ role_assignment = authorization.RoleAssignment(
         account.name,
     ),
 )
+
+
+# Add relevant secrets to repository for Github Action workflow
+app_publish_credentials = web.list_web_app_publishing_credentials_output(
+    name=app.name,
+    resource_group_name=resource_group.name
+)
+
+pulumi.Output.all(
+    app_publish_credentials,
+    app.default_host_name,
+    app.name,
+    config.get("repo-url").split("/")[-1]
+).apply(lambda args: add_publish_profile_and_web_app_name(*args))
+
 
 pulumi.Output.all(
     client_config.client_id,
