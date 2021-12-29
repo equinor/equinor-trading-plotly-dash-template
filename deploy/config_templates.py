@@ -1,6 +1,7 @@
 from typing import List
 
 import pulumi
+from pulumi_azure_native.web.list_web_app_publishing_credentials import ListWebAppPublishingCredentialsResult
 
 
 def create_config_file(args: List[str]) -> None:
@@ -37,8 +38,17 @@ data_files = {{
     with open("../config.py", "w") as file:
         file.write(config_file)
 
-def create_publish_profile(publish_url: str, user_name: str, user_pwd: str, destination_app_url: str) -> str:
-    publish_profile = f"""<publishData>
+def create_publish_profile(publish_profile: ListWebAppPublishingCredentialsResult, app_url: str) -> str:
+    # Make mypy happy
+    assert publish_profile.scm_uri is not None
+    assert publish_profile.publishing_password is not None
+
+    publish_url = publish_profile.scm_uri.split("@")[-1] + ":443"
+    user_name = publish_profile.publishing_user_name
+    user_pwd = publish_profile.publishing_password
+    destination_app_url = "https://" + app_url
+
+    publish_profile_string = f"""<publishData>
     <publishProfile
         publishUrl="{publish_url}"
         userName="{user_name}"
@@ -47,4 +57,5 @@ def create_publish_profile(publish_url: str, user_name: str, user_pwd: str, dest
     >
     </publishProfile>
 </publishData>"""
-    return publish_profile
+
+    return publish_profile_string

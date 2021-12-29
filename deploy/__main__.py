@@ -2,8 +2,8 @@ from typing import Dict
 import uuid
 
 import pulumi
-from pulumi_azure_native.web.list_web_app_publishing_credentials import ListWebAppPublishingCredentialsResult
 import pulumi_azuread as ad
+import pulumi_github as gh
 from pulumi_azure_native import (
     authorization,
     insights,
@@ -13,8 +13,7 @@ from pulumi_azure_native import (
     web,
 )
 
-from config_templates import create_config_file
-from utils import add_publish_profile_and_web_app_name
+from config_templates import create_config_file, create_publish_profile
 
 config = pulumi.Config()
 client_config = authorization.get_client_config()
@@ -253,12 +252,20 @@ app_publish_credentials = web.list_web_app_publishing_credentials_output(
     resource_group_name=resource_group.name
 )
 
-pulumi.Output.all(
-    app_publish_credentials,
-    app.default_host_name,
-    app.name,
-    config.get("repo-url").split("/")[-1]
-).apply(lambda args: add_publish_profile_and_web_app_name(*args))
+gh.ActionsSecret("github-publish-profile",
+    secret_name="AZURE_WEBAPP_PUBLISH_PROFILE",
+    repository=config.get("repo-url").split("/")[-1],
+    plaintext_value=pulumi.Output.all(
+        app_publish_credentials,
+        app.default_host_name,
+    ).apply(lambda args: create_publish_profile(*args))
+)
+
+gh.ActionsSecret("github-app-name",
+    secret_name="AZURE_WEBAPP_NAME",
+    repository=config.get("repo-url").split("/")[-1],
+    plaintext_value=app.name
+)
 
 
 pulumi.Output.all(
