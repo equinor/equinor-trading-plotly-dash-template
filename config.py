@@ -12,7 +12,7 @@ SCOPES = ["User.ReadBasic.All"]
 SESSION_TYPE = (
     "filesystem"  # Specifies the token cache should be stored in server-side session
 )
-KEYVAULT_URI = "https://plotlydashexampl75195362.vault.azure.net/"
+KEYVAULT_URI = "https://plotlydashexamplf6c865ec.vault.azure.net/"
 SECRET_NAME = "client-secret"
 ROLES: List[str] = []
 CHECK_PROD = "IS_PROD"
@@ -21,7 +21,7 @@ CHECK_PROD = "IS_PROD"
 # Data files
 data_files = {
     "iris": {
-        "account_url": "https://plotlydashexample484079a.blob.core.windows.net",
+        "account_url": "https://plotlydashexampl7b242230.blob.core.windows.net",
         "container": "test",
         "filename": "iris.csv",
     }
