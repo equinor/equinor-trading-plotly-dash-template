@@ -2,18 +2,17 @@ import functools
 from typing import Any, Callable, Dict, List, Optional
 
 import msal
-from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from flask import redirect, session, url_for
 
+from src.models.AppSettings import AppSettings
+
 
 class Auth:
-    def __init__(self, config: Any, credential: DefaultAzureCredential):
-        self.config = config
-        self.client = SecretClient(
-            vault_url=self.config.KEYVAULT_URI, credential=credential
-        )
-        self.client_credential = self.client.get_secret(self.config.SECRET_NAME).value
+    def __init__(self, app_settings: AppSettings, client: SecretClient):
+        self.app_settings = app_settings
+
+        self.client_credential = client.get_secret(self.app_settings.secret_name).value
 
     def _load_cache(self) -> msal.SerializableTokenCache:
         cache = msal.SerializableTokenCache()
@@ -29,8 +28,8 @@ class Auth:
         self, cache: Any = None, authority: Any = None
     ) -> msal.ConfidentialClientApplication:
         return msal.ConfidentialClientApplication(
-            self.config.CLIENT_ID,
-            authority=authority or self.config.AUTHORITY,
+            self.app_settings.client_id,
+            authority=authority or self.app_settings.authority,
             client_credential=self.client_credential,
             token_cache=cache,
         )

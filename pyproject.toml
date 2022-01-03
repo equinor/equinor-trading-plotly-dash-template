@@ -25,6 +25,7 @@ azure-core = "^1.21.0"
 scikit-learn = "^1.0.1"
 requests = "^2.26.0"
 gunicorn = "^20.1.0"
+pydantic = "^1.8.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -35,6 +36,7 @@ flake8 = "^4.0.1"
 Sphinx = "^4.3.1"
 sphinx-rtd-theme = "^1.0.0"
 types-requests = "^2.26.2"
+ipykernel = "^6.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

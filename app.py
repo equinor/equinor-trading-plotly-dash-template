@@ -1,3 +1,7 @@
+# TODO: compress venv
+# TODO: export only prod packages when deploying
+# TODO: move pulumi to main project?
+
 import logging
 import os
 import traceback
@@ -5,6 +9,7 @@ from typing import Any, List, Text, Union
 
 import requests
 from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 from flask import Flask, redirect, render_template, request, session, url_for
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -16,10 +21,19 @@ from src.utils.auth import Auth, login_required
 from src.utils.DataLoader import DataLoader
 from views.DashApp import DashApp
 from views.IrisExample import IrisExample
+from src.utils.environment import get_variables
 
-
+# TODO: remove this function?
 def app() -> Flask:
-    if config.CHECK_PROD in os.environ:
+    credential = DefaultAzureCredential(
+        exclude_visual_studio_code_credential=True,
+        exclude_shared_token_cache_credential=True,
+    )
+    secret_client = SecretClient(
+        vault_url=os.environ["KEYVAULT_URI"], credential=credential
+    )
+
+    if os.getenv("IS_PROD"):
         logger = logging.getLogger(__name__)
         logger.addHandler(
             AzureLogHandler(
@@ -28,23 +42,23 @@ def app() -> Flask:
                 )
             )
         )
-    credential = DefaultAzureCredential(
-        exclude_visual_studio_code_credential=True,
-        exclude_shared_token_cache_credential=True,
-    )
+
+    app_settings = get_variables(secret_client)
+
     data_loader = DataLoader(credential)
 
     server = Flask(__name__, template_folder="html_templates", static_folder="assets")
-    server.config.from_object(config)
+    server.config.from_object(config) # This is needed by flask session to access the "SESSION_TYPE" config value 
     Session(server)
 
-    # Dash stuff
-    DASH_URL_BASE = "/views/"
+    for _, value in config.data_files.items():
+        if "account_url" not in value:
+            value["account_url"] = f"https://{app_settings.storage_name}.blob.core.windows.net"
 
     # Extend this list with more dash apps
     dash_apps: List[DashApp] = [
         IrisExample(
-            DASH_URL_BASE + "iris-example/",
+            config.DASH_URL_BASE + "iris-example/",
             {
                 "name": "Iris Example",
             },
@@ -55,19 +69,20 @@ def app() -> Flask:
         ),
     ]
 
-    auth = Auth(config, credential)
+    auth = Auth(app_settings, secret_client)
 
     server.wsgi_app = ProxyFix(server.wsgi_app, x_proto=1, x_host=1)  # type: ignore
 
-    for i, dash_app in enumerate(dash_apps):
+    # TODO: Add storage account path
+    for dash_app in dash_apps:
         dash_app.initialize(server)
         for view_func in dash_app.app.server.view_functions:
             dash_app.app.server.view_functions[view_func] = login_required(
-                auth, config.ROLES, config.SCOPES
+                auth, app_settings.roles, config.SCOPES
             )(dash_app.app.server.view_functions[view_func])
 
     @server.route("/")
-    @login_required(auth, config.ROLES, config.SCOPES)
+    @login_required(auth, app_settings.roles, config.SCOPES)
     def index() -> Text:
         if "flow" not in session:
             session["flow"] = auth._build_auth_code_flow(scopes=config.SCOPES)
@@ -82,7 +97,7 @@ def app() -> Flask:
         )
 
     @server.route("/test")
-    @login_required(auth, config.ROLES, config.SCOPES)
+    @login_required(auth, app_settings.roles, config.SCOPES)
     def test() -> Any:
         token = auth._get_token_from_cache(config.SCOPES)
         graph_data = requests.get(
@@ -92,7 +107,7 @@ def app() -> Flask:
         return graph_data
 
     @server.route("/menu")
-    @login_required(auth, config.ROLES, config.SCOPES)
+    @login_required(auth, app_settings.roles, config.SCOPES)
     def menu() -> Text:
         return render_template(
             "menu.html",
@@ -111,7 +126,7 @@ def app() -> Flask:
     def access_denied() -> Text:
         return render_template("access_denied.html")
 
-    @server.route(config.REDIRECT_PATH)
+    @server.route(app_settings.redirect_path)
     def authorized() -> Union[Text, Any]:
         try:
             cache = auth._load_cache()
@@ -136,14 +151,14 @@ def app() -> Flask:
     def logout() -> Response:
         session.clear()
         return redirect(
-            config.AUTHORITY
+            app_settings.authority
             + "/oauth2/v2.0/logout"
             + "?post_logout_redirect_uri="
             + url_for("index", _external=True)
         )
 
     @server.route("/graphcall")
-    @login_required(auth, config.ROLES, config.SCOPES)
+    @login_required(auth, app_settings.roles, config.SCOPES)
     def graphcall() -> Text:
         token = auth._get_token_from_cache(config.SCOPES)
         graph_data = requests.get(
