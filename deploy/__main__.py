@@ -1,4 +1,3 @@
-from typing import Dict
 import uuid
 
 import pulumi
@@ -13,7 +12,7 @@ from pulumi_azure_native import (
     web,
 )
 
-from config_templates import create_config_file, create_publish_profile
+from config_templates import create_publish_profile
 
 config = pulumi.Config()
 client_config = authorization.get_client_config()
@@ -31,6 +30,7 @@ roles = [
             "value": "Read"
         }
 ]
+REDIRECT_PATH = "/getAToken"
 
 # Create an Azure Resource Group
 resource_group = resources.ResourceGroup(config.get("project-name-prefix"))
@@ -86,6 +86,7 @@ app = web.WebApp(
     resource_group_name=resource_group.name,
     server_farm_id=plan.id,
     site_config=web.SiteConfigArgs(
+        linux_fx_version="PYTHON|3.8",
         app_command_line='gunicorn --bind=0.0.0.0 --timeout 600 "app:app()"',
         app_settings=[
             web.NameValuePairArgs(
@@ -141,8 +142,8 @@ app_registration = ad.Application(
             id_token_issuance_enabled=True
         ),
         redirect_uris=[
-            app.default_host_name.apply(lambda arg: "https://" + arg + "/getAToken"),
-            "http://localhost:5000/getAToken",
+            app.default_host_name.apply(lambda arg: "https://" + arg + REDIRECT_PATH),
+            "http://localhost:5000" + REDIRECT_PATH,
         ],
     )
 )
@@ -268,10 +269,33 @@ gh.ActionsSecret("github-app-name",
 )
 
 
-pulumi.Output.all(
-    client_config.client_id,
-    client_config.tenant_id,
-    vault.name,
-    secret.name,
-    account.name,
-).apply(create_config_file)
+app_application_settings = web.WebAppApplicationSettings("app-application-settings",
+    resource_group_name=resource_group.name,
+    name=app.name,
+    properties={
+        "KEYVAULT_URI": vault.name.apply(lambda vault_name: f"https://{vault_name}.vault.azure.net/"),
+        "IS_PROD": "IS_PROD",
+    }
+)
+
+properties = {
+    "clientid": app_registration.application_id,
+    "authority": f"https://login.microsoftonline.com/{client_config.tenant_id}",
+    "secretname": secret.name,
+    "storagename": account.name,
+    "redirectpath": REDIRECT_PATH,
+    "roles": ",".join([r["value"] for r in roles])
+}
+
+for key, value in properties.items():
+    keyvault.Secret(
+        key,
+        properties=keyvault.SecretPropertiesArgs(
+            value=value,
+        ),
+        resource_group_name=resource_group.name,
+        secret_name=key,
+        vault_name=vault.name,
+    )
+
+pulumi.export("Vault uri", vault.name.apply(lambda vault_name: f"https://{vault_name}.vault.azure.net/"))
