@@ -1,4 +1,5 @@
 import functools
+import os
 from typing import Any, Callable, Dict, List, Optional
 
 import msal
@@ -59,6 +60,11 @@ def login_required(
     def wrapper(func: Callable) -> Callable:
         @functools.wraps(func)
         def secure_function(*args: Any, **kwargs: Any) -> Callable:
+            if os.getenv("AUTH") == "skip":
+                if os.getenv("IS_PROD"):
+                    raise EnvironmentError("Auth bypass is not allowed in production.")
+                print("WARNING: AUTH BYPASS IS ACTIVE. THIS SHOULD ONLY BE ACTIVE IN DEV.")
+                return func(*args, **kwargs)
             token = auth._get_token_from_cache(scopes)
             if not token:
                 return redirect(url_for("not_signed_in", reason="login"))
