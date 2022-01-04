@@ -1,7 +1,3 @@
-# TODO: compress venv
-# TODO: export only prod packages when deploying
-# TODO: move pulumi to main project?
-
 import logging
 import os
 import traceback
@@ -71,7 +67,6 @@ auth = Auth(app_settings, secret_client)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # type: ignore
 
-# TODO: Add storage account path
 for dash_app in dash_apps:
     dash_app.initialize(app)
     for view_func in dash_app.app.server.view_functions:
