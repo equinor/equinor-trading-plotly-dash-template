@@ -15,9 +15,9 @@ import config
 from flask_session import Session
 from src.utils.auth import Auth, login_required
 from src.utils.DataLoader import DataLoader
+from src.utils.environment import get_variables
 from views.DashApp import DashApp
 from views.IrisExample import IrisExample
-from src.utils.environment import get_variables
 
 credential = DefaultAzureCredential(
     exclude_visual_studio_code_credential=True,
@@ -31,9 +31,7 @@ if os.getenv("IS_PROD"):
     logger = logging.getLogger(__name__)
     logger.addHandler(
         AzureLogHandler(
-            connection_string=os.environ.get(
-                "APPLICATIONINSIGHTS_CONNECTION_STRING"
-            )
+            connection_string=os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
         )
     )
 
@@ -42,12 +40,16 @@ app_settings = get_variables(secret_client)
 data_loader = DataLoader(credential)
 
 app = Flask(__name__, template_folder="html_templates", static_folder="assets")
-app.config.from_object(config) # This is needed by flask session to access the "SESSION_TYPE" config value 
+app.config.from_object(
+    config
+)  # This is needed by flask session to access the "SESSION_TYPE" config value
 Session(app)
 
 for _, value in config.data_files.items():
     if "account_url" not in value:
-        value["account_url"] = f"https://{app_settings.storage_name}.blob.core.windows.net"
+        value[
+            "account_url"
+        ] = f"https://{app_settings.storage_name}.blob.core.windows.net"
 
 # Extend this list with more dash apps
 dash_apps: List[DashApp] = [
@@ -74,6 +76,7 @@ for dash_app in dash_apps:
             auth, app_settings.roles, config.SCOPES
         )(dash_app.app.server.view_functions[view_func])
 
+
 @app.route("/")
 @login_required(auth, app_settings.roles, config.SCOPES)
 def index() -> Text:
@@ -89,6 +92,7 @@ def index() -> Text:
         name=name,
     )
 
+
 @app.route("/test")
 @login_required(auth, app_settings.roles, config.SCOPES)
 def test() -> Any:
@@ -99,6 +103,7 @@ def test() -> Any:
     ).json()
     return graph_data
 
+
 @app.route("/menu")
 @login_required(auth, app_settings.roles, config.SCOPES)
 def menu() -> Text:
@@ -108,16 +113,17 @@ def menu() -> Text:
         dash_apps=dash_apps,
     )
 
+
 @app.route("/not_signed_in")
 def not_signed_in() -> Text:
     session["flow"] = auth._build_auth_code_flow(scopes=config.SCOPES)
-    return render_template(
-        "not_signed_in.html", auth_url=session["flow"]["auth_uri"]
-    )
+    return render_template("not_signed_in.html", auth_url=session["flow"]["auth_uri"])
+
 
 @app.route("/access_denied")
 def access_denied() -> Text:
     return render_template("access_denied.html")
+
 
 @app.route(app_settings.redirect_path)
 def authorized() -> Union[Text, Any]:
@@ -140,6 +146,7 @@ def authorized() -> Union[Text, Any]:
         )
     return redirect(url_for("index"))
 
+
 @app.route("/logout")
 def logout() -> Response:
     session.clear()
@@ -149,6 +156,7 @@ def logout() -> Response:
         + "?post_logout_redirect_uri="
         + url_for("index", _external=True)
     )
+
 
 @app.route("/graphcall")
 @login_required(auth, app_settings.roles, config.SCOPES)
@@ -160,8 +168,9 @@ def graphcall() -> Text:
     ).json()
     return render_template("display.html", result=graph_data)
 
+
 app.jinja_env.globals.update(_build_auth_code_flow=auth._build_auth_code_flow)
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+    app.run(host="0.0.0.0")

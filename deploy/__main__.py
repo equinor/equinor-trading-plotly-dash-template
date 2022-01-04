@@ -1,8 +1,8 @@
-import uuid
-
 import pulumi
 import pulumi_azuread as ad
 import pulumi_github as gh
+from config_templates import create_publish_profile
+from DeployConfig import DeployConfig
 from pulumi_azure_native import (
     authorization,
     insights,
@@ -11,9 +11,6 @@ from pulumi_azure_native import (
     storage,
     web,
 )
-
-from config_templates import create_publish_profile
-from DeployConfig import DeployConfig
 
 deploy_config = DeployConfig.parse_file("deploy_config.json")
 
@@ -108,18 +105,21 @@ app_registration = ad.Application(
             display_name=role.display_name,
             id=role.id,
             enabled=role.is_enabled,
-            value=role.value
-        ) for role in deploy_config.roles
+            value=role.value,
+        )
+        for role in deploy_config.roles
     ],
     web=ad.ApplicationWebArgs(
         implicit_grant=ad.ApplicationWebImplicitGrantArgs(
             id_token_issuance_enabled=True
         ),
         redirect_uris=[
-            app.default_host_name.apply(lambda arg: "https://" + arg + deploy_config.redirect_path),
+            app.default_host_name.apply(
+                lambda arg: "https://" + arg + deploy_config.redirect_path
+            ),
             "http://localhost:5000" + deploy_config.redirect_path,
         ],
-    )
+    ),
 )
 
 app_client_secret = ad.ApplicationPassword(
@@ -141,7 +141,7 @@ for role in deploy_config.roles:
         role.display_name,
         app_role_id=role.id,
         principal_object_id=client_config.object_id,
-        resource_object_id=service_principal.object_id
+        resource_object_id=service_principal.object_id,
     )
 
 
@@ -177,7 +177,7 @@ vault = keyvault.Vault(
         tenant_id=client_config.tenant_id,
     ),
     resource_group_name=resource_group.name,
-    vault_name=config.get("key-vault-name")
+    vault_name=config.get("key-vault-name"),
 )
 
 secret = keyvault.Secret(
@@ -224,27 +224,29 @@ role_assignment = authorization.RoleAssignment(
 
 # Add relevant secrets to repository for Github Action workflow
 app_publish_credentials = web.list_web_app_publishing_credentials_output(
-    name=app.name,
-    resource_group_name=resource_group.name
+    name=app.name, resource_group_name=resource_group.name
 )
 
-gh.ActionsSecret("github-publish-profile",
+gh.ActionsSecret(
+    "github-publish-profile",
     secret_name="AZURE_WEBAPP_PUBLISH_PROFILE",
     repository=config.get("repo-url").split("/")[-1],
     plaintext_value=pulumi.Output.all(
         app_publish_credentials,
         app.default_host_name,
-    ).apply(lambda args: create_publish_profile(*args))
+    ).apply(lambda args: create_publish_profile(*args)),
 )
 
-gh.ActionsSecret("github-app-name",
+gh.ActionsSecret(
+    "github-app-name",
     secret_name="AZURE_WEBAPP_NAME",
     repository=config.get("repo-url").split("/")[-1],
-    plaintext_value=app.name
+    plaintext_value=app.name,
 )
 
 
-app_application_settings = web.WebAppApplicationSettings("app-application-settings",
+app_application_settings = web.WebAppApplicationSettings(
+    "app-application-settings",
     resource_group_name=resource_group.name,
     name=app.name,
     properties={
@@ -253,9 +255,11 @@ app_application_settings = web.WebAppApplicationSettings("app-application-settin
             lambda key: "InstrumentationKey=" + key
         ),
         "ApplicationInsightsAgent_EXTENSION_VERSION": "~2",
-        "KEYVAULT_URI": vault.name.apply(lambda vault_name: f"https://{vault_name}.vault.azure.net/"),
+        "KEYVAULT_URI": vault.name.apply(
+            lambda vault_name: f"https://{vault_name}.vault.azure.net/"
+        ),
         "IS_PROD": "IS_PROD",
-    }
+    },
 )
 
 properties = {
@@ -264,7 +268,7 @@ properties = {
     "secretname": secret.name,
     "storagename": account.name,
     "redirectpath": deploy_config.redirect_path,
-    "roles": ",".join([r.value for r in deploy_config.roles])
+    "roles": ",".join([r.value for r in deploy_config.roles]),
 }
 
 for key, value in properties.items():
@@ -278,4 +282,7 @@ for key, value in properties.items():
         vault_name=vault.name,
     )
 
-pulumi.export("Vault uri", vault.name.apply(lambda vault_name: f"https://{vault_name}.vault.azure.net/"))
+pulumi.export(
+    "Vault uri",
+    vault.name.apply(lambda vault_name: f"https://{vault_name}.vault.azure.net/"),
+)

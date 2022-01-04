@@ -1,6 +1,8 @@
 from typing import List
+
 from pydantic import BaseModel
 from pydantic.fields import Field
+
 
 class Role(BaseModel):
     allowed_member_types: List[str] = Field(alias="allowedMemberTypes")
@@ -11,7 +13,7 @@ class Role(BaseModel):
     origin: str
     value: str
 
+
 class DeployConfig(BaseModel):
     roles: List[Role]
     redirect_path: str = Field(alias="redirectPath")
-

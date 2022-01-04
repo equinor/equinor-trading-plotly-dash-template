@@ -63,7 +63,9 @@ def login_required(
             if os.getenv("AUTH") == "skip":
                 if os.getenv("IS_PROD"):
                     raise EnvironmentError("Auth bypass is not allowed in production.")
-                print("WARNING: AUTH BYPASS IS ACTIVE. THIS SHOULD ONLY BE ACTIVE IN DEV.")
+                print(
+                    "WARNING: AUTH BYPASS IS ACTIVE. THIS SHOULD ONLY BE ACTIVE IN DEV."
+                )
                 return func(*args, **kwargs)
             token = auth._get_token_from_cache(scopes)
             if not token:

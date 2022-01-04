@@ -1,14 +1,21 @@
-from typing import Union
-from src.models.AppSettings import AppSettings
+from typing import List, Union
+
 from azure.keyvault.secrets import SecretClient
 
-def _format_roles(roles: Union[str, None]):
-    if roles == None: raise ValueError("ROLES environment variable is not set.")
-    if roles == "": roles_list = []
-    else: roles_list = roles.split(",")
+from src.models.AppSettings import AppSettings
+
+
+def _format_roles(roles: Union[str, None]) -> List[str]:
+    if roles is None:
+        raise ValueError("ROLES environment variable is not set.")
+    if roles == "":
+        roles_list = []
+    else:
+        roles_list = roles.split(",")
     return roles_list
 
-def get_variables(secret_client: SecretClient):
+
+def get_variables(secret_client: SecretClient) -> "AppSettings":
     client_id = secret_client.get_secret("clientid")
     authority = secret_client.get_secret("authority")
     redirect_path = secret_client.get_secret("redirectpath")
