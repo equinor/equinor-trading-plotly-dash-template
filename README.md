@@ -1,39 +1,34 @@
-# Equinor Trading template repo
+# Equinor Trading Plotly Dash template repo
 
-This is a template containing all the essentials you need when creating a new repo for a project. The main components are the following:
-
-- `docs` - This is folder contains the setup needed to build the docstring documentation.
-- `src` - Main folder for code modules.
-- `test` - Folder containing tests.
-- `.github/workflows/lint-and-format.yml` - Github Actions workflow for lint checking and automated testing.
-- `pre-commit-config.yaml` - Pre-commit configuration for automatically running lint checking and automated testing before committing.
-- `pyproject.toml`, `poetry.lock` - Project and package definition.
-- `setup.cfg` - Configuration of linting tools.
-
+This repo contains a template for hosting a Flask server with a Plotly Dash dashboard component.
+It contains configuration for authentication towards Azure AD and can be deployed automatically using Pulumi infrastructure as code.
+The deploy code will scaffold everything needed to run a complete service in the cloud.
 
 ## Getting started
+Currently this project depends on some values that are generated when the service is deployed to Azure.
+This might be improved in the future, but for the time being you actually have to setup the whole environment before running it locally.
+To setup the infrastructure, complete the following steps.
 
 1. Install [poetry](https://python-poetry.org/docs/)
-1. Clone repository
-1. Run `poetry config virtualenvs.in-project true` followed by `poetry install` from the project root folder. A .venv folder should now be created and placed in the root of the project. 
-1. Run `poetry shell` to create a new poetry shell, followed `jupyter notebook` to open [jupyter notebook](https://jupyter.org/) in this environment. 
-1. Install pre-commit hook by running `poetry run pre-commit install`
+1. Clone this repository
+1. Run `poetry config virtualenvs.in-project true`
+1. Run `poetry install` in both the top level folder and in the `deploy` folder
+2. Navigate to the `deploy` folder
+3. Set the Github token and owner values as described [here](https://www.pulumi.com/registry/packages/github/installation-configuration/)
+4. (Optional) Rename the Pulumi project name
+4. (Optional) Set the project name config variables:
+    ```
+    pulumi config set key-vault-name PROJECT_NAME
+    pulumi config set project-name-prefix PROJECT_NAME
+    ```
+5. (Equinor only) Make sure that you have the Azure AD `Application Developer` role and the access to create new resources in your subscription
+5. Run `pulumi up`
+6. Done! The service should be hosted as an Azure Web App in Azure
 
-## How to build the docs
-Build `.rst` files
+## Running locally
 
-```
-poetry run sphinx-apidoc -o docs/source src
-```
+In the `/scripts/` folder, there is a `run_dev.sh` file with some environment variables that can be configured.
+You need to update the key vault name to the new key vault you have created in Azure.
+When the values are updated, you can run the service locally by running `./scripts/run_dev.sh`.
 
-Build HTML files from `.rst` files
-
-```
-poetry run sphinx-build -b html docs/source docs/build
-```
-
-The docs can now be accessed under docs/build. 
-
-## Run tests
-
-`poetry run python -m pytest`
+By default, authentication is deactivated locally, but you can activate it by remove the `AUTH` variable.
