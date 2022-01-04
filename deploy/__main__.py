@@ -13,24 +13,13 @@ from pulumi_azure_native import (
 )
 
 from config_templates import create_publish_profile
+from DeployConfig import DeployConfig
+
+deploy_config = DeployConfig.parse_file("deploy_config.json")
 
 config = pulumi.Config()
 client_config = authorization.get_client_config()
 
-roles = [
-        {
-            "allowedMemberTypes": [
-                "User"
-            ],
-            "description": "Read data",
-            "displayName": "Read",
-            "id": "6db443d0-1217-46ec-b794-8c7a71ed716c",
-            "isEnabled": True,
-            "origin": "Application",
-            "value": "Read"
-        }
-]
-REDIRECT_PATH = "/getAToken"
 
 # Create an Azure Resource Group
 resource_group = resources.ResourceGroup(config.get("project-name-prefix"))
@@ -87,22 +76,6 @@ app = web.WebApp(
     server_farm_id=plan.id,
     site_config=web.SiteConfigArgs(
         linux_fx_version="PYTHON|3.8",
-        app_command_line='gunicorn --bind=0.0.0.0 --timeout 600 "app:app()"',
-        app_settings=[
-            web.NameValuePairArgs(
-                name="APPINSIGHTS_INSTRUMENTATIONKEY",
-                value=app_insights.instrumentation_key,
-            ),
-            web.NameValuePairArgs(
-                name="APPLICATIONINSIGHTS_CONNECTION_STRING",
-                value=app_insights.instrumentation_key.apply(
-                    lambda key: "InstrumentationKey=" + key
-                ),
-            ),
-            web.NameValuePairArgs(
-                name="ApplicationInsightsAgent_EXTENSION_VERSION", value="~2"
-            ),
-        ]
     ),
     identity=web.ManagedServiceIdentityArgs(
         type=web.ManagedServiceIdentityType.SYSTEM_ASSIGNED
@@ -128,22 +101,23 @@ app_registration = ad.Application(
     config.get("project-name-prefix"),
     display_name=config.get("project-name-prefix"),
     owners=[client_config.object_id],
-    app_roles=[ad.ApplicationAppRoleArgs(
-            allowed_member_types=role["allowedMemberTypes"],
-            description=role["description"],
-            display_name=role["displayName"],
-            id=role["id"],
-            enabled=role["isEnabled"],
-            value=role["value"]
-        ) for role in roles
+    app_roles=[
+        ad.ApplicationAppRoleArgs(
+            allowed_member_types=role.allowed_member_types,
+            description=role.description,
+            display_name=role.display_name,
+            id=role.id,
+            enabled=role.is_enabled,
+            value=role.value
+        ) for role in deploy_config.roles
     ],
     web=ad.ApplicationWebArgs(
         implicit_grant=ad.ApplicationWebImplicitGrantArgs(
             id_token_issuance_enabled=True
         ),
         redirect_uris=[
-            app.default_host_name.apply(lambda arg: "https://" + arg + REDIRECT_PATH),
-            "http://localhost:5000" + REDIRECT_PATH,
+            app.default_host_name.apply(lambda arg: "https://" + arg + deploy_config.redirect_path),
+            "http://localhost:5000" + deploy_config.redirect_path,
         ],
     )
 )
@@ -162,10 +136,10 @@ service_principal = ad.ServicePrincipal(
     owners=[client_config.object_id],
 )
 
-for role in roles:
+for role in deploy_config.roles:
     role_assignment = ad.AppRoleAssignment(
-        role["displayName"],
-        app_role_id=role["id"],
+        role.display_name,
+        app_role_id=role.id,
         principal_object_id=client_config.object_id,
         resource_object_id=service_principal.object_id
     )
@@ -195,6 +169,7 @@ vault = keyvault.Vault(
         enabled_for_deployment=True,
         enabled_for_disk_encryption=True,
         enabled_for_template_deployment=True,
+        enable_soft_delete=False,
         sku=keyvault.SkuArgs(
             family="A",
             name=keyvault.SkuName.STANDARD,
@@ -202,7 +177,7 @@ vault = keyvault.Vault(
         tenant_id=client_config.tenant_id,
     ),
     resource_group_name=resource_group.name,
-    vault_name=config.get("project-name-prefix")[:16] + str(uuid.uuid4())[:8],
+    vault_name=config.get("key-vault-name")
 )
 
 secret = keyvault.Secret(
@@ -273,6 +248,11 @@ app_application_settings = web.WebAppApplicationSettings("app-application-settin
     resource_group_name=resource_group.name,
     name=app.name,
     properties={
+        "APPINSIGHTS_INSTRUMENTATIONKEY": app_insights.instrumentation_key,
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": app_insights.instrumentation_key.apply(
+            lambda key: "InstrumentationKey=" + key
+        ),
+        "ApplicationInsightsAgent_EXTENSION_VERSION": "~2",
         "KEYVAULT_URI": vault.name.apply(lambda vault_name: f"https://{vault_name}.vault.azure.net/"),
         "IS_PROD": "IS_PROD",
     }
@@ -283,8 +263,8 @@ properties = {
     "authority": f"https://login.microsoftonline.com/{client_config.tenant_id}",
     "secretname": secret.name,
     "storagename": account.name,
-    "redirectpath": REDIRECT_PATH,
-    "roles": ",".join([r["value"] for r in roles])
+    "redirectpath": deploy_config.redirect_path,
+    "roles": ",".join([r.value for r in deploy_config.roles])
 }
 
 for key, value in properties.items():

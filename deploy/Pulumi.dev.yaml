@@ -1,5 +1,6 @@
 config:
   azure-native:location: westeurope
+  equinor-trading-plotly-dash-template:key-vault-name: plotlyexample
   equinor-trading-plotly-dash-template:project-name-prefix: plotlydashexample
   equinor-trading-plotly-dash-template:repo-url: https://github.com/equinor/equinor-trading-plotly-dash-template
   equinor-trading-plotly-dash-template:test-filecontainer: test
