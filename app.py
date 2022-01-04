@@ -7,12 +7,12 @@ import requests
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from flask import Flask, redirect, render_template, request, session, url_for
+from flask_session import Session
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.wrappers import Response
 
 import config
-from flask_session import Session
 from src.utils.auth import Auth, login_required
 from src.utils.DataLoader import DataLoader
 from src.utils.environment import get_variables
