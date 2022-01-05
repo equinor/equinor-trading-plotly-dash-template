@@ -1,11 +1,8 @@
-# %%
-"""An Azure RM Python Pulumi program"""
-
-import uuid
-from typing import List
-
 import pulumi
 import pulumi_azuread as ad
+import pulumi_github as gh
+from config_templates import create_publish_profile
+from DeployConfig import DeployConfig
 from pulumi_azure_native import (
     authorization,
     insights,
@@ -15,29 +12,19 @@ from pulumi_azure_native import (
     web,
 )
 
+deploy_config = DeployConfig.parse_file("deploy_config.json")
+
 config = pulumi.Config()
 client_config = authorization.get_client_config()
 
-app_registration = ad.Application(
-    "appregistration", display_name="NGTT-test-app", owners=[client_config.object_id]
-)
-
-app_client_secret = ad.ApplicationPassword(
-    "appclientsecret",
-    application_object_id=app_registration.object_id,
-    display_name="Client secret",
-    end_date_relative="8700h",
-)
-
-# CUSTOM_IMAGE = "cicddeployment"
 
 # Create an Azure Resource Group
-resource_group = resources.ResourceGroup("plotly-dash-example")
+resource_group = resources.ResourceGroup(config.get("project-name-prefix"))
 
 
 # Create an Azure resource (Storage Account)
 account = storage.StorageAccount(
-    "sa",
+    config.get("project-name-prefix")[:16],
     resource_group_name=resource_group.name,
     sku=storage.SkuArgs(
         name=storage.SkuName.STANDARD_LRS,
@@ -46,23 +33,24 @@ account = storage.StorageAccount(
 )
 
 container = storage.BlobContainer(
-    "test",
+    config.get("test-filecontainer"),
     resource_group_name=resource_group.name,
     account_name=account.name,
 )
 
 blob = storage.Blob(
-    "iris.csv",
+    config.get("test-filename"),
     resource_group_name=resource_group.name,
     account_name=account.name,
     container_name=container.name,
-    source=pulumi.FileAsset("../test/iris.csv"),
+    source=pulumi.FileAsset(config.get("test-filepath")),
     content_type="text",
 )
 
 
+# App service
 plan = web.AppServicePlan(
-    "plan",
+    config.get("project-name-prefix"),
     resource_group_name=resource_group.name,
     kind="Linux",
     reserved=True,
@@ -72,83 +60,19 @@ plan = web.AppServicePlan(
     ),
 )
 
-# registry = containerregistry.Registry(
-#     "registry",
-#     resource_group_name=resource_group.name,
-#     sku=containerregistry.SkuArgs(
-#         name="Basic",
-#     ),
-#     admin_user_enabled=True)
-
-# credentials = containerregistry.list_registry_credentials_output(resource_group_name=resource_group.name,
-#                                                                  registry_name=registry.name)
-# admin_username = credentials.username
-# admin_password = credentials.passwords[0]["value"]
-
-# my_image = docker.Image(
-#     CUSTOM_IMAGE,
-#     image_name=registry.login_server.apply(
-#         lambda login_server: f"{login_server}/{CUSTOM_IMAGE}:v1.0.0"),
-#     build=docker.DockerBuild(context=f"./{CUSTOM_IMAGE}"),
-#     registry=docker.ImageRegistry(
-#         server=registry.login_server,
-#         username=admin_username,
-#         password=admin_password
-#     )
-# )
-
-# web_app = web.WebApp(
-#     "webapp",
-#     resource_group_name=resource_group.name,
-#     server_farm_id=plan.id,
-#     site_config=web.SiteConfigArgs(
-#         app_settings=[
-#             web.NameValuePairArgs(name="WEBSITES_ENABLE_APP_SERVICE_STORAGE", value="false"),
-#             web.NameValuePairArgs(name="DOCKER_REGISTRY_SERVER_URL",
-#                                   value=registry.login_server.apply(
-#                                       lambda login_server: f"https://{login_server}")),
-#             web.NameValuePairArgs(name="DOCKER_REGISTRY_SERVER_USERNAME",
-#                                   value=admin_username),
-#             web.NameValuePairArgs(name="DOCKER_REGISTRY_SERVER_PASSWORD",
-#                                   value=admin_password),
-#             web.NameValuePairArgs(name="WEBSITES_PORT", value="80"),
-#         ],
-#         always_on=True,
-#         linux_fx_version=my_image.image_name.apply(lambda image_name: f"DOCKER|{image_name}"),
-#     ),
-#     https_only=True,
-#     identity=web.ManagedServiceIdentityArgs(
-#         type=web.ManagedServiceIdentityType.SYSTEM_ASSIGNED
-#     )
-# )
-
 app_insights = insights.Component(
-    "appservice-ai",
+    config.get("project-name-prefix"),
     application_type=insights.ApplicationType.WEB,
     kind="web",
     resource_group_name=resource_group.name,
 )
 
 app = web.WebApp(
-    "webapp",
+    config.get("project-name-prefix"),
     resource_group_name=resource_group.name,
     server_farm_id=plan.id,
     site_config=web.SiteConfigArgs(
-        app_settings=[
-            web.NameValuePairArgs(
-                name="APPINSIGHTS_INSTRUMENTATIONKEY",
-                value=app_insights.instrumentation_key,
-            ),
-            web.NameValuePairArgs(
-                name="APPLICATIONINSIGHTS_CONNECTION_STRING",
-                value=app_insights.instrumentation_key.apply(
-                    lambda key: "InstrumentationKey=" + key
-                ),
-            ),
-            web.NameValuePairArgs(
-                name="ApplicationInsightsAgent_EXTENSION_VERSION", value="~2"
-            ),
-        ]
+        linux_fx_version="PYTHON|3.8",
     ),
     identity=web.ManagedServiceIdentityArgs(
         type=web.ManagedServiceIdentityType.SYSTEM_ASSIGNED
@@ -156,17 +80,97 @@ app = web.WebApp(
 )
 
 app_source_control = web.WebAppSourceControl(
-    "webapp-source-control",
+    config.get("project-name-prefix"),
     name=app.name,
     resource_group_name=resource_group.name,
     branch="main",
     is_git_hub_action=True,
     repo_url=config.get("repo-url"),
     git_hub_action_configuration=web.GitHubActionConfigurationArgs(
-        generate_workflow_file=False
-    )
+        generate_workflow_file=False,
+        is_linux=True,
+    ),
 )
 
+
+# Azure Active Directory related resources
+app_registration = ad.Application(
+    config.get("project-name-prefix"),
+    display_name=config.get("project-name-prefix"),
+    owners=[client_config.object_id],
+    app_roles=[
+        ad.ApplicationAppRoleArgs(
+            allowed_member_types=role.allowed_member_types,
+            description=role.description,
+            display_name=role.display_name,
+            id=role.id,
+            enabled=role.is_enabled,
+            value=role.value,
+        )
+        for role in deploy_config.roles
+    ],
+    web=ad.ApplicationWebArgs(
+        implicit_grant=ad.ApplicationWebImplicitGrantArgs(
+            id_token_issuance_enabled=True
+        ),
+        redirect_uris=[
+            app.default_host_name.apply(
+                lambda arg: "https://" + arg + deploy_config.redirect_path
+            ),
+            "http://localhost:5000" + deploy_config.redirect_path,
+        ],
+    ),
+)
+
+app_client_secret = ad.ApplicationPassword(
+    config.get("project-name-prefix"),
+    application_object_id=app_registration.object_id,
+    display_name="Client secret",
+    end_date_relative="8700h",
+)
+
+service_principal = ad.ServicePrincipal(
+    config.get("project-name-prefix"),
+    application_id=app_registration.application_id,
+    app_role_assignment_required=True,
+    owners=[client_config.object_id],
+)
+
+for role in deploy_config.roles:
+    role_assignment = ad.AppRoleAssignment(
+        role.display_name,
+        app_role_id=role.id,
+        principal_object_id=client_config.object_id,
+        resource_object_id=service_principal.object_id,
+    )
+
+# Adding this might be a little redundant since authentication
+# is already being handled in the web app, but it adds an additional layer of security.
+app_auth = web.WebAppAuthSettingsV2(
+    config.get("project-name-prefix"),
+    name=app.name,
+    resource_group_name=resource_group.name,
+    identity_providers=web.IdentityProvidersArgs(
+        azure_active_directory=web.AzureActiveDirectoryArgs(
+            enabled=True,
+            registration=web.AzureActiveDirectoryRegistrationArgs(
+                client_id=app_registration.application_id,
+                open_id_issuer=f"https://login.microsoftonline.com/{client_config.tenant_id}",
+                client_secret_setting_name="CLIENT_SECRET",
+            ),
+        ),
+    ),
+    global_validation=web.GlobalValidationArgs(
+        require_authentication=True,
+        unauthenticated_client_action=web.UnauthenticatedClientActionV2.REDIRECT_TO_LOGIN_PAGE,
+        redirect_to_provider="AzureActiveDirectory",
+    ),
+    platform=web.AuthPlatformArgs(enabled=True),
+    login=web.LoginArgs(token_store=web.TokenStoreArgs(enabled=True)),
+)
+
+
+# Key vault
 access_policies = []
 access_policies.append(
     keyvault.AccessPolicyEntryArgs(
@@ -184,12 +188,13 @@ access_policies.append(
 )
 
 vault = keyvault.Vault(
-    "vault",
+    config.get("project-name-prefix"),
     properties=keyvault.VaultPropertiesArgs(
         access_policies=access_policies,
         enabled_for_deployment=True,
         enabled_for_disk_encryption=True,
         enabled_for_template_deployment=True,
+        enable_soft_delete=False,
         sku=keyvault.SkuArgs(
             family="A",
             name=keyvault.SkuName.STANDARD,
@@ -197,18 +202,7 @@ vault = keyvault.Vault(
         tenant_id=client_config.tenant_id,
     ),
     resource_group_name=resource_group.name,
-    vault_name="vault" + str(uuid.uuid4())[:8],
-)
-
-
-secret = keyvault.Secret(
-    "client-secret",
-    properties=keyvault.SecretPropertiesArgs(
-        value=app_client_secret.value,
-    ),
-    resource_group_name=resource_group.name,
-    secret_name="client-secret",
-    vault_name=vault.name,
+    vault_name=config.get("key-vault-name"),
 )
 
 
@@ -243,45 +237,69 @@ role_assignment = authorization.RoleAssignment(
 )
 
 
-def create_config_file(args: List[pulumi.Output]) -> None:
-    client_id, tenant_id, vault_name, secret_name, account_name = args
-    config_file = f"""from typing import List
-
-CLIENT_ID = "{client_id}"  # Application (client) ID of app registration
-AUTHORITY = "https://login.microsoftonline.com/{tenant_id}"
-REDIRECT_PATH = "/getAToken"  # Used for forming an absolute URL to your redirect URI.
-# The absolute URL must match the redirect URI you set
-# in the app's registration in the Azure portal.
-ENDPOINT = (
-    "https://graph.microsoft.com/v1.0/me"  # This resource requires no admin consent
+# Add relevant secrets to repository for Github Action workflow
+app_publish_credentials = web.list_web_app_publishing_credentials_output(
+    name=app.name, resource_group_name=resource_group.name
 )
-SCOPES = ["User.ReadBasic.All"]
-SESSION_TYPE = (
-    "filesystem"  # Specifies the token cache should be stored in server-side session
+
+gh.ActionsSecret(
+    "github-publish-profile",
+    secret_name="AZURE_WEBAPP_PUBLISH_PROFILE",
+    repository=config.get("repo-url").split("/")[-1],
+    plaintext_value=pulumi.Output.all(
+        app_publish_credentials,
+        app.default_host_name,
+    ).apply(lambda args: create_publish_profile(*args)),
 )
-KEYVAULT_URI = "https://{vault_name}.vault.azure.net/"
-SECRET_NAME = "{secret_name}"
-ROLES: List[str] = []
-CHECK_PROD = "IS_PROD"
+
+gh.ActionsSecret(
+    "github-app-name",
+    secret_name="AZURE_WEBAPP_NAME",
+    repository=config.get("repo-url").split("/")[-1],
+    plaintext_value=app.name,
+)
 
 
-# Data files
-data_files = {{
-    "iris": {{
-        "account_url": "https://{account_name}.blob.core.windows.net",
-        "container": "test",
-        "filename": "iris.csv",
-    }}
-}}
-"""
-    with open("../config.py", "w") as file:
-        file.write(config_file)
+app_application_settings = web.WebAppApplicationSettings(
+    "app-application-settings",
+    resource_group_name=resource_group.name,
+    name=app.name,
+    properties={
+        "APPINSIGHTS_INSTRUMENTATIONKEY": app_insights.instrumentation_key,
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": app_insights.instrumentation_key.apply(
+            lambda key: "InstrumentationKey=" + key
+        ),
+        "ApplicationInsightsAgent_EXTENSION_VERSION": "~2",
+        "KEYVAULT_URI": vault.name.apply(
+            lambda vault_name: f"https://{vault_name}.vault.azure.net/"
+        ),
+        "IS_PROD": "IS_PROD",
+        "CLIENT_SECRET": app_client_secret.value,
+    },
+)
 
+properties = {
+    "clientid": app_registration.application_id,
+    "authority": f"https://login.microsoftonline.com/{client_config.tenant_id}",
+    "secretname": "client-secret",
+    "storagename": account.name,
+    "redirectpath": deploy_config.redirect_path,
+    "roles": ",".join([r.value for r in deploy_config.roles]),
+    "client-secret": app_client_secret.value,
+}
 
-pulumi.Output.all(
-    client_config.client_id,
-    client_config.tenant_id,
-    vault.name,
-    secret.name,
-    account.name,
-).apply(create_config_file)
+for key, value in properties.items():
+    keyvault.Secret(
+        key,
+        properties=keyvault.SecretPropertiesArgs(
+            value=value,
+        ),
+        resource_group_name=resource_group.name,
+        secret_name=key,
+        vault_name=vault.name,
+    )
+
+pulumi.export(
+    "Vault uri",
+    vault.name.apply(lambda vault_name: f"https://{vault_name}.vault.azure.net/"),
+)

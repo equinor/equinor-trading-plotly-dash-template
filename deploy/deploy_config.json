@@ -1,0 +1,16 @@
+{
+    "roles": [
+        {
+            "allowedMemberTypes": [
+                "User"
+            ],
+            "description": "Read data",
+            "displayName": "Read",
+            "id": "6db443d0-1217-46ec-b794-8c7a71ed716c",
+            "isEnabled": true,
+            "origin": "Application",
+            "value": "Read"
+        }
+    ],
+    "redirectPath": "/getAToken"
+}

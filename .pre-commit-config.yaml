@@ -39,8 +39,8 @@ repos:
 #        types: [python]
 #        pass_filenames: false
 
-      - id: pytest-cov
-        name: pytest-cov
+      - id: pytest
+        name: pytest
         stages: [push]
         language: system
         entry: poetry run python -m pytest
