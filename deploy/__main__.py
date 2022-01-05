@@ -156,23 +156,17 @@ app_auth = web.WebAppAuthSettingsV2(
             registration=web.AzureActiveDirectoryRegistrationArgs(
                 client_id=app_registration.application_id,
                 open_id_issuer=f"https://login.microsoftonline.com/{client_config.tenant_id}",
-                client_secret_setting_name="CLIENT_SECRET"
-            )
+                client_secret_setting_name="CLIENT_SECRET",
+            ),
         ),
     ),
     global_validation=web.GlobalValidationArgs(
         require_authentication=True,
         unauthenticated_client_action=web.UnauthenticatedClientActionV2.REDIRECT_TO_LOGIN_PAGE,
-        redirect_to_provider="AzureActiveDirectory"
+        redirect_to_provider="AzureActiveDirectory",
     ),
-    platform=web.AuthPlatformArgs(
-        enabled=True
-    ),
-    login=web.LoginArgs(
-        token_store=web.TokenStoreArgs(
-            enabled=True
-        )
-    )
+    platform=web.AuthPlatformArgs(enabled=True),
+    login=web.LoginArgs(token_store=web.TokenStoreArgs(enabled=True)),
 )
 
 
@@ -280,7 +274,7 @@ app_application_settings = web.WebAppApplicationSettings(
             lambda vault_name: f"https://{vault_name}.vault.azure.net/"
         ),
         "IS_PROD": "IS_PROD",
-        "CLIENT_SECRET": app_client_secret.value
+        "CLIENT_SECRET": app_client_secret.value,
     },
 )
 
@@ -291,7 +285,7 @@ properties = {
     "storagename": account.name,
     "redirectpath": deploy_config.redirect_path,
     "roles": ",".join([r.value for r in deploy_config.roles]),
-    "client-secret": app_client_secret.value
+    "client-secret": app_client_secret.value,
 }
 
 for key, value in properties.items():
