@@ -11,7 +11,7 @@ To setup the infrastructure, complete the following steps.
 
 1. Install [poetry](https://python-poetry.org/docs/)
 1. Install [pulumi](https://www.pulumi.com/docs/get-started/install/)
-1. Clone this repository
+1. Clone this repository or create a new repo based on the template
 1. Run `poetry config virtualenvs.in-project true`
 1. Run `poetry install` in both the top level folder and in the `deploy` folder
 2. Navigate to the `deploy` folder
