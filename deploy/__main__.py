@@ -132,7 +132,7 @@ app_client_secret = ad.ApplicationPassword(
 service_principal = ad.ServicePrincipal(
     config.get("project-name-prefix"),
     application_id=app_registration.application_id,
-    app_role_assignment_required=False,
+    app_role_assignment_required=True,
     owners=[client_config.object_id],
 )
 
@@ -143,6 +143,37 @@ for role in deploy_config.roles:
         principal_object_id=client_config.object_id,
         resource_object_id=service_principal.object_id,
     )
+
+# Adding this might be a little redundant since authentication
+# is already being handled in the web app, but it adds an additional layer of security.
+app_auth = web.WebAppAuthSettingsV2(
+    config.get("project-name-prefix"),
+    name=app.name,
+    resource_group_name=resource_group.name,
+    identity_providers=web.IdentityProvidersArgs(
+        azure_active_directory=web.AzureActiveDirectoryArgs(
+            enabled=True,
+            registration=web.AzureActiveDirectoryRegistrationArgs(
+                client_id=app_registration.application_id,
+                open_id_issuer=f"https://login.microsoftonline.com/{client_config.tenant_id}",
+                client_secret_setting_name="CLIENT_SECRET"
+            )
+        ),
+    ),
+    global_validation=web.GlobalValidationArgs(
+        require_authentication=True,
+        unauthenticated_client_action=web.UnauthenticatedClientActionV2.REDIRECT_TO_LOGIN_PAGE,
+        redirect_to_provider="AzureActiveDirectory"
+    ),
+    platform=web.AuthPlatformArgs(
+        enabled=True
+    ),
+    login=web.LoginArgs(
+        token_store=web.TokenStoreArgs(
+            enabled=True
+        )
+    )
+)
 
 
 # Key vault
@@ -178,16 +209,6 @@ vault = keyvault.Vault(
     ),
     resource_group_name=resource_group.name,
     vault_name=config.get("key-vault-name"),
-)
-
-secret = keyvault.Secret(
-    "client-secret",
-    properties=keyvault.SecretPropertiesArgs(
-        value=app_client_secret.value,
-    ),
-    resource_group_name=resource_group.name,
-    secret_name="client-secret",
-    vault_name=vault.name,
 )
 
 
@@ -259,16 +280,18 @@ app_application_settings = web.WebAppApplicationSettings(
             lambda vault_name: f"https://{vault_name}.vault.azure.net/"
         ),
         "IS_PROD": "IS_PROD",
+        "CLIENT_SECRET": app_client_secret.value
     },
 )
 
 properties = {
     "clientid": app_registration.application_id,
     "authority": f"https://login.microsoftonline.com/{client_config.tenant_id}",
-    "secretname": secret.name,
+    "secretname": "client-secret",
     "storagename": account.name,
     "redirectpath": deploy_config.redirect_path,
     "roles": ",".join([r.value for r in deploy_config.roles]),
+    "client-secret": app_client_secret.value
 }
 
 for key, value in properties.items():
