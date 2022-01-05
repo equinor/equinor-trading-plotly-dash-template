@@ -5,7 +5,7 @@ config:
   equinor-trading-plotly-dash-template:repo-url: https://github.com/equinor/equinor-trading-plotly-dash-template
   equinor-trading-plotly-dash-template:test-filecontainer: test
   equinor-trading-plotly-dash-template:test-filename: iris.csv
-  equinor-trading-plotly-dash-template:test-filepath: ../test/iris.csv
+  equinor-trading-plotly-dash-template:test-filepath: ../tests/iris.csv
   github:owner: equinor
   github:token:
     secure: AAABAKsj6YhuEhUesnrzzboV2mMxrTkQwj42Jpbs1iuoSEvQH2WJ5gw3UvmZVd8mQgmizL5w0QxhaxsoYnT55CuqXNvAuEUG
