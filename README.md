@@ -2,7 +2,7 @@
 
 This repo contains a template for hosting a Flask server with a Plotly Dash dashboard component.
 It contains configuration for authentication towards Azure AD and can be deployed automatically using Pulumi infrastructure as code.
-The deploy code will scaffold everything needed to run a complete service in the cloud.
+The deploy code will scaffold everything needed to run a complete service in the cloud, requiring minimal knowledge of Azure.
 
 ## Getting started
 Currently this project depends on some values that are generated when the service is deployed to Azure.
@@ -13,9 +13,9 @@ To setup the infrastructure, complete the following steps.
 1. Install [pulumi](https://www.pulumi.com/docs/get-started/install/)
 1. Clone this repository or create a new repo based on the template
 1. Run `poetry config virtualenvs.in-project true`
-1. Run `poetry install` in both the top level folder and in the `deploy` folder
+1. Run `poetry install` in both the top level folder AND in the `deploy` folder
 2. Navigate to the `deploy` folder
-3. Set the Github token and owner values as described [here](https://www.pulumi.com/registry/packages/github/installation-configuration/). Select the `workflow` scope.
+3. Set the Github token and owner values as described [here](https://www.pulumi.com/registry/packages/github/installation-configuration/). Select the `workflow` scope when generating the Github token.
 4.  Set a unique key vault name:
     ```
     pulumi config set key-vault-name PROJECT_NAME
@@ -29,7 +29,7 @@ To setup the infrastructure, complete the following steps.
 5. Run `pulumi up`
 6. Done! The service should be hosted as an Azure Web App in Azure
 
-Note that the authentication will block access to the service until an AD admin as given an admin grant the application.
+Note that the authentication provider will block access to the service until an AD admin as given an admin grant to the application.
 
 ## Running locally
 
@@ -37,4 +37,4 @@ In the `/scripts/` folder, there is a `run_dev.sh` file with some environment va
 You need to update the key vault name to the new key vault you have created in Azure.
 When the values are updated, you can run the service locally by running `./scripts/run_dev.sh`.
 
-By default, authentication is deactivated locally, but you can activate it by remove the `AUTH` variable.
+By default, authentication is deactivated locally, but you can activate it by removing the `AUTH` variable.
