@@ -15,8 +15,9 @@ To setup the infrastructure, complete the following steps.
 1. Run `poetry config virtualenvs.in-project true`
 1. Run `poetry install` in both the top level folder AND in the `deploy` folder
 2. Navigate to the `deploy` folder
-3. Generate a personal access token in Github. Select the `workflow` scope when generating the Github token
-4. Set the access token, when requested for stack name write `dev`: 
+4. (Optional) Rename the Pulumi project name in the Pulumi config files (probably have to do that for the config prefix too)
+4. Generate a personal access token in Github. Select the `workflow` scope when generating the Github token
+5. Set the access token, when requested for stack name write `dev`: 
     ```
     pulumi config set github:token XXXXXXXXXXXXXX --secret
     ```
@@ -28,7 +29,6 @@ To setup the infrastructure, complete the following steps.
     ```
     pulumi config set key-vault-name PROJECT_NAME
     ```
-4. (Optional) Rename the Pulumi project name in the Pulumi config files (probably have to do that for the config prefix too)
 4. (Optional) Set the project name config variables:
     ```
     pulumi config set project-name-prefix PROJECT_NAME
