@@ -35,7 +35,8 @@ To setup the infrastructure, complete the following steps.
     ```
 5. (Equinor only) Make sure that you have the Azure AD `Application Developer` role and the access to create new resources in your subscription
 5. Run `pulumi up`
-6. Done! The service should be hosted as an Azure Web App in Azure
+6. List the people responsible for technical support in `access_denied.html`
+7. Done! The service should be hosted as an Azure Web App in Azure
 
 Note that the authentication provider will block access to the service until an AD admin as given an admin grant to the application.
 

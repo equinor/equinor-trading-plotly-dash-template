@@ -71,7 +71,7 @@ def login_required(
             if not token:
                 return redirect(url_for("not_signed_in", reason="login"))
             if "roles" not in session["user"].keys() or (
-                roles and not any(role in session["user"]["roles"] for role in roles)
+                roles and not all(role in session["user"]["roles"] for role in roles)
             ):
                 return redirect(url_for("access_denied", reason="login"))
             return func(*args, **kwargs)
